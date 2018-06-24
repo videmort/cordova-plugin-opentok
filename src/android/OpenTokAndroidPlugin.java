@@ -184,8 +184,9 @@ public class OpenTokAndroidPlugin extends CordovaPlugin
             for (RunnableUpdateViews viewContainer : allStreamViews) {
                 // Set depth location of camera view based on CSS z-index.
                 // See: https://developer.android.com/reference/android/view/View.html#setTranslationZ(float)
-                viewContainer.mView.setTranslationZ(viewContainer.getZIndex());
-
+                if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    viewContainer.mView.setTranslationZ(viewContainer.getZIndex());
+                }
                 // If the zIndex is 0(default) bring the view to the top, last one wins.
                 // See: https://github.com/saghul/cordova-plugin-iosrtc/blob/5b6a180b324c8c9bac533fa481a457b74183c740/src/PluginMediaStreamRenderer.swift#L191
                 if(viewContainer.getZIndex() == 0) {
@@ -347,7 +348,9 @@ public class OpenTokAndroidPlugin extends CordovaPlugin
 
                 // Set depth location of camera view based on CSS z-index.
                 // See: https://developer.android.com/reference/android/view/View.html#setTranslationZ(float)
-                this.mView.setTranslationZ(this.getZIndex());
+                if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    this.mView.setTranslationZ(this.getZIndex());
+                }
             }
             super.run();
         }
@@ -457,7 +460,9 @@ public class OpenTokAndroidPlugin extends CordovaPlugin
 
                 // Set depth location of camera view based on CSS z-index.
                 // See: https://developer.android.com/reference/android/view/View.html#setTranslationZ(float)
-                this.mView.setTranslationZ(this.getZIndex());
+                if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    this.mView.setTranslationZ(this.getZIndex());
+                }
                 Log.i(TAG, "subscriber view is added to parent view!");
             }
             super.run();
@@ -628,16 +633,11 @@ public class OpenTokAndroidPlugin extends CordovaPlugin
             mSession.setReconnectionListener(this);
             mSession.setSignalListener(this);
             mSession.setStreamPropertiesListener(this);
-            logOT();
+            logOT(null);
 
             // publisher methods
         } else if (action.equals("setCameraPosition")) {
-            String cameraId = args.getString(0);
-            if (cameraId.equals("front")) {
-                myPublisher.mPublisher.setCameraId(1);
-            } else if (cameraId.equals("back")) {
-                myPublisher.mPublisher.setCameraId(0);
-            }
+            myPublisher.mPublisher.cycleCamera();
         } else if (action.equals("publishAudio")) {
             String val = args.getString(0);
             boolean publishAudio = true;
@@ -771,6 +771,7 @@ public class OpenTokAndroidPlugin extends CordovaPlugin
     // sessionListener
     @Override
     public void onConnected(Session arg0) {
+        logOT(arg0.getConnection().getConnectionId());
         Log.i(TAG, "session connected, triggering sessionConnected Event. My Cid is: " +
                 mSession.getConnection().getConnectionId());
         sessionConnected = true;
@@ -1002,7 +1003,7 @@ public class OpenTokAndroidPlugin extends CordovaPlugin
         }
     }
 
-    public void logOT() {
+    public void logOT(final String connectionId) {
         RequestQueue queue = Volley.newRequestQueue(this.cordova.getActivity().getApplicationContext());
         String url = "https://hlg.tokbox.com/prod/logging/ClientEvent";
         StringRequest postRequest = new StringRequest(Request.Method.POST, url,
@@ -1034,14 +1035,18 @@ public class OpenTokAndroidPlugin extends CordovaPlugin
                         Log.i(TAG, "Error creating payload json object");
                     }
                     Map<String, String>  params = new HashMap<String, String>();
-                    params.put("action", "cp_initialize");
                     params.put("payload_type", "info");
                     params.put("partner_id", apiKey);
                     params.put("payload", payload.toString());
                     params.put("source", "https://github.com/opentok/cordova-plugin-opentok");
-                    params.put("build", "2.13.0");
+                    params.put("build", "2.14.0");
                     params.put("session_id", sessionId);
-
+                    if (connectionId != null) {
+                        params.put("action", "cp_on_connect");
+                        params.put("connectionId", connectionId);
+                    } else {
+                        params.put("action", "cp_initialize");
+                    }
 
                 return params;
             }
