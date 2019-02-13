@@ -1111,7 +1111,10 @@ public class OpenTokAndroidPlugin extends CordovaPlugin
 
         PluginResult myResult = new PluginResult(PluginResult.Status.OK, message);
         myResult.setKeepCallback(true);
-        myEventListeners.get(event).sendPluginResult(myResult);
+        CallbackContext cbContext = myEventListeners.get(event);
+        if (cbContext != null){
+            cbContext.sendPluginResult(myResult);
+        }
     }
 
     @Override
