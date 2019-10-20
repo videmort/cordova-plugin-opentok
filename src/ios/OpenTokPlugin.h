@@ -9,13 +9,16 @@
 #import <Cordova/CDVPlugin.h>
 #import <UIKit/UIKit.h>
 #import <OpenTok/OpenTok.h>
+#import "UIView+Category.h"
 
-@interface OpenTokPlugin : CDVPlugin <OTSessionDelegate, OTPublisherDelegate, OTSubscriberKitDelegate>
-
+@interface OpenTokPlugin : CDVPlugin <OTSessionDelegate, OTPublisherDelegate, OTPublisherKitAudioLevelDelegate, OTPublisherKitNetworkStatsDelegate, OTSubscriberKitDelegate, OTSubscriberKitAudioLevelDelegate, OTSubscriberKitNetworkStatsDelegate>
 @property(nonatomic, copy) NSString* exceptionId;
 
 // OpenTok Logging
 - (void)logOT:(NSString*)connectionId;
+
+// Helpers
+- (NSString*)getBase64PNGFromUIView:(UIView *)view;
 
 // Tokbox Library Functions
 - (void)addEvent:(CDVInvokedUrlCommand*)command;
@@ -31,6 +34,7 @@
 - (void)publishVideo:(CDVInvokedUrlCommand*)command;
 - (void)setCameraPosition:(CDVInvokedUrlCommand*)command;
 - (void)destroyPublisher:(CDVInvokedUrlCommand*)command;
+- (void)getImgData:(CDVInvokedUrlCommand*)command;
 
 // Session
 - (void)connect:(CDVInvokedUrlCommand*)command;
