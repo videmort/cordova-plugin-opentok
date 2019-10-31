@@ -54,10 +54,10 @@
 
     NSMutableDictionary *payload = [[NSMutableDictionary alloc]init];
     [payload setObject:@"iOS" forKey:@"platform"];
-    [payload setObject:@"3.4.3" forKey:@"cp_version"];
+    [payload setObject:@"3.4.1" forKey:@"cp_version"];
     NSMutableDictionary *logData = [[NSMutableDictionary alloc]init];
     [logData setObject:apiKey forKey:@"partner_id"];
-    [logData setObject:@"2.15.3" forKey:@"build"];
+    [logData setObject:@"2.15.0" forKey:@"build"];
     [logData setObject:@"https://github.com/opentok/cordova-plugin-opentok" forKey:@"source"];
     [logData setObject:@"info" forKey:@"payload_type"];
     [logData setObject:payload forKey:@"payload"];
@@ -138,7 +138,7 @@
     // Sanitize publisher properties
     if ([cameraResolution isEqualToString:@"1280x720"]) {
       finalCameraResolution = OTCameraCaptureResolutionHigh;
-    }else if ([cameraResolution isEqualToString:@"320x240"] || [cameraResolution isEqualToString:@"352x288"]) {
+    }else if ([cameraResolution isEqualToString:@"352x288"]) {
       finalCameraResolution = OTCameraCaptureResolutionLow;
     } else {
       finalCameraResolution = OTCameraCaptureResolutionMedium;
@@ -168,8 +168,6 @@
 
     // Publish and set View
     _publisher = [[OTPublisher alloc] initWithDelegate:self settings:_publisherSettings];
-    _publisher.networkStatsDelegate = self;
-    _publisher.audioLevelDelegate = self;
     [_publisher setPublishAudio:bpubAudio];
     [_publisher setPublishVideo:bpubVideo];
     [_publisher setAudioFallbackEnabled:baudioFallbackEnabled];
@@ -233,15 +231,6 @@
     [self.commandDelegate sendPluginResult:callbackResult callbackId:command.callbackId];
 }
 
-// Helper function to get the base64 image of a view
-- (NSString*)getBase64PNGFromUIView:(UIView *)view {
-    UIImage *screenshot = [view captureViewImage];
-    NSData *imageData = UIImageJPEGRepresentation(screenshot, 1);
-    NSString *encodedString = [imageData base64EncodedStringWithOptions:0 ];
-    return [NSString stringWithFormat:@"data:image/png;base64,%@",encodedString];
-}
-    
-
 #pragma mark Publisher Methods
 - (void)publishAudio:(CDVInvokedUrlCommand*)command{
     NSString* publishAudio = [command.arguments objectAtIndex:0];
@@ -285,27 +274,6 @@
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
-- (void)getImgData:(CDVInvokedUrlCommand*)command{
-    NSString* sid = [command.arguments objectAtIndex:0];
-    NSString *snapshot;
-    OTSubscriber * subscriber;
-    
-    if ([sid isEqualToString:@"TBPublisher"]) {
-        if (_publisher.view) {
-            snapshot = [self getBase64PNGFromUIView: _publisher.view];
-        }
-    } else {
-        subscriber = [subscriberDictionary objectForKey:sid];
-        if (subscriber) {
-            snapshot = [self getBase64PNGFromUIView: subscriber.view];
-        }
-    }
-    
-    CDVPluginResult* callbackResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                                                        messageAsString: snapshot];
-    [callbackResult setKeepCallbackAsBool:YES];
-    [self.commandDelegate sendPluginResult:callbackResult callbackId:command.callbackId];
-}
 
 #pragma mark Subscriber Methods
 - (void)subscribeToAudio:(CDVInvokedUrlCommand*)command{
@@ -342,21 +310,8 @@
     NSLog(@"iOS Connecting to Session");
 
     // Get Parameters
-    OTError *error = nil;
     NSString* tbToken = [command.arguments objectAtIndex:0];
-    [_session connectWithToken:tbToken error:&error];
-    CDVPluginResult* pluginResult;
-    if (error) {
-        NSNumber* code = [NSNumber numberWithInt:[error code]];
-        NSMutableDictionary* err = [[NSMutableDictionary alloc] init];
-        [err setObject:error.localizedDescription forKey:@"message"];
-        [err setObject:code forKey:@"code"];
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:err];
-    } else {
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-
+    [_session connectWithToken:tbToken error:nil];
 }
 
 // Called by session.disconnect()
@@ -401,8 +356,6 @@
     // Acquire Stream, then create a subscriber object and put it into dictionary
     OTStream* myStream = [streamDictionary objectForKey:sid];
     OTSubscriber* sub = [[OTSubscriber alloc] initWithStream:myStream delegate:self];
-    sub.audioLevelDelegate = self;
-    sub.networkStatsDelegate = self;
     [_session subscribe:sub error:nil];
 
     if ([[command.arguments objectAtIndex:6] isEqualToString:@"false"]) {
@@ -679,12 +632,12 @@
 
     NSLog(@"iOS Session Received signal from Connection: %@ with id %@", connection, [connection connectionId]);
     NSMutableDictionary* data = [[NSMutableDictionary alloc] init];
-    [data setObject: (type == nil) ? @ "" : type forKey: @"type"];
-    [data setObject: (string == nil) ? @"" : string forKey: @"data"];
+    [data setObject: type forKey: @"type"];
+    [data setObject: string forKey: @"data"];
     if (connection.connectionId) {
         [data setObject: connection.connectionId forKey: @"connectionId"];
+        [self triggerJSEvent: @"sessionEvents" withType: @"signalReceived" withData: data];
     }
-    [self triggerJSEvent: @"sessionEvents" withType: @"signalReceived" withData: data];
 }
 - (void)session:(OTSession*)session archiveStartedWithId:(nonnull NSString *)archiveId name:(NSString *_Nullable)name{
     NSMutableDictionary* data = [[NSMutableDictionary alloc] init];

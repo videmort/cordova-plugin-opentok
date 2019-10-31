@@ -425,16 +425,8 @@ TBPublisher = (function() {
     }
   };
 
-  TBPublisher.prototype.getImgData = function(callback) {
-    var errorCb, successCb;
-    errorCb = function(error) {
-      return callback(error);
-    };
-    successCb = function(img) {
-      return callback(null, img);
-    };
-    Cordova.exec(successCb, errorCb, OTPlugin, "getImgData", [PublisherStreamId]);
-    return this;
+  TBPublisher.prototype.getImgData = function() {
+    return "";
   };
 
   TBPublisher.prototype.getStyle = function() {
@@ -467,7 +459,6 @@ TBPublisher = (function() {
     var streamEvent;
     streamEvent = new TBEvent("audioLevelUpdated");
     streamEvent.audioLevel = event.audioLevel;
-    this.dispatchEvent(streamEvent);
     return this;
   };
 
@@ -540,22 +531,16 @@ var TBSession,
 
 TBSession = (function() {
   TBSession.prototype.connect = function(token, connectCompletionCallback) {
-    var errorCallback, successCallback;
     this.token = token;
     if (typeof connectCompletionCallback !== "function" && (connectCompletionCallback != null)) {
       TB.showError("Session.connect() takes a token and an optional completionHandler");
       return;
     }
     if ((connectCompletionCallback != null)) {
-      errorCallback = function(error) {
-        return connectCompletionCallback(error);
-      };
-      successCallback = function() {
-        return connectCompletionCallback(null);
-      };
+      this.on('sessionConnected', connectCompletionCallback);
     }
     Cordova.exec(this.eventReceived, TBError, OTPlugin, "addEvent", ["sessionEvents"]);
-    Cordova.exec(successCallback, errorCallback, OTPlugin, "connect", [this.token]);
+    Cordova.exec(TBSuccess, TBError, OTPlugin, "connect", [this.token]);
   };
 
   TBSession.prototype.disconnect = function() {
@@ -953,16 +938,8 @@ TBSubscriber = (function() {
     return 0;
   };
 
-  TBSubscriber.prototype.getImgData = function(callback) {
-    var errorCb, successCb;
-    errorCb = function(error) {
-      return callback(error);
-    };
-    successCb = function(img) {
-      return callback(null, img);
-    };
-    Cordova.exec(successCb, errorCb, OTPlugin, "getImgData", [this.streamId]);
-    return this;
+  TBSubscriber.prototype.getImgData = function() {
+    return "";
   };
 
   TBSubscriber.prototype.getStyle = function() {
@@ -1063,7 +1040,6 @@ TBSubscriber = (function() {
     OT.getHelper().eventing(this);
     Cordova.exec(TBSuccess, TBError, OTPlugin, "subscribe", [stream.streamId, position.top, position.left, width, height, zIndex, subscribeToAudio, subscribeToVideo, ratios.widthRatio, ratios.heightRatio]);
     Cordova.exec(this.eventReceived, TBSuccess, OTPlugin, "addEvent", ["subscriberEvents"]);
-    OT.updateViews();
   }
 
   TBSubscriber.prototype.eventReceived = function(response) {
@@ -1127,7 +1103,6 @@ TBSubscriber = (function() {
     var streamEvent;
     streamEvent = new TBEvent("audioLevelUpdated");
     streamEvent.audioLevel = event.audioLevel;
-    this.dispatchEvent(streamEvent);
     return this;
   };
 
